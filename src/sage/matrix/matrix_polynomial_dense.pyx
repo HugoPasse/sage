@@ -99,6 +99,54 @@ cdef class Matrix_polynomial_dense(Matrix_generic_dense):
     with the shifts `((n-1)d,\ldots,2d,d,0)`.
     """
 
+    def partial_linearization_degree(self):
+        r"""
+        Return a generic determinant bound
+        
+        For a given square polynomial matrix `A = \left(a_{i,j}\right)_{1 \leq i,j \leq n}`, a generic upper determinant bound
+        is given by the formula `\mathrm{GenericDetBound}(A) = \max_{\sigma \in S_n} \sum_{i=1}^n`. A 2-approximation
+        of this quantity  can be used as degree for partial linearization.
+
+        OUTPUT: an integer
+
+        EXAMPLES::
+
+            sage: pring.<x> = GF(97)[]
+            sage: mat = Matrix(pring, [[34*x + 22, 91, 0],[0, 92*x^2 + 50*x + 96, 0],[89*x^2 + 24*x + 63, 0, 90*x^2 + 79*x + 50]])
+            sage: mat
+            [         34*x + 22                 91                  0]
+            [                 0 92*x^2 + 50*x + 96                  0]
+            [89*x^2 + 24*x + 63                  0 90*x^2 + 79*x + 50]
+            sage: mat.determinant().degree()
+            5
+            sage: mat.partial_linearization_degree()
+            3
+
+        The bound is a 2-approximation of the degree of the determinant. The partial linearization is a bound approximation of the degree of the determinant, hence this method is not implemented for rectangular matrices::
+
+            sage: mat = random_matrix(pring,5,3)
+            sage: mat.partial_linearization_degree()
+            Traceback (most recent call last):
+            ...
+            ValueError: Partial linearization degree not defined for rectangular matrices
+
+        """
+        # Raise an error if the matrix in not square
+        if self.nrows() != self.ncols():
+            raise ValueError('Partial linearization degree not defined for rectangular matrices') 
+        
+        deg_mat = self.degree_matrix()
+        n = deg_mat.nrows()
+        for i in range(n):
+            coeffs = deg_mat[i:,i:].dense_coefficient_list()
+            
+            m = max(coeffs)
+            index = coeffs.index(m)
+            ii, jj = index // (n-i), index % (n-i)
+            deg_mat.swap_rows(i,i+ii)
+            deg_mat.swap_columns(i,i+jj)
+        return sum([deg_mat[i,i] for i in range(n)])
+
     def _check_shift_dimension(self, shifts, row_wise=True):
         r"""
         Raises an exception if the ``shifts`` argument does not have the right
